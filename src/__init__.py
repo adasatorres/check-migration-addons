@@ -1,0 +1,1 @@
+from . import main # Importa el módulo main para que se ejecute al importar el paquete
