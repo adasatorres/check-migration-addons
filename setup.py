@@ -17,4 +17,8 @@ setup(
             "check-migration-addons=src.main:main",  # mi_script.py con función main()
         ],
     },
+    author="Adasat Torres de León",
+    author_email="adasat.torres.dev@gmail.com",
+    description="Verifica addons migrados en repositorios de GitHub y genera Excel",
+    url="https://github.com/adasatorres/check-migration-addons",
 )
