@@ -19,7 +19,7 @@ The script performs the following key functions:
 5. Outputs the results to the console and saves them to a new Excel file.
 
 Usage:
-    python main.py --input-file <input_file_path> --branch <branch_name> --token <github_token>
+    python main.py --file <input_file_path> --branch <branch_name> --token <github_token>
 
 Dependencies:
     - pandas

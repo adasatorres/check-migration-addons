@@ -34,14 +34,14 @@ Nota: Actualmente debes de utilizar este comando dentro de la ruta del proyecto 
 
 Para utilizar check-migration-addons necesitas 3 parametros obligatorios.
 
-- `--input-file` → Este parámetro índica la ruta absoluta o relativa de donde se encuentra el archivo excel a utilizar.
+- `--file` → Este parámetro índica la ruta absoluta o relativa de donde se encuentra el archivo excel a utilizar.
 - `--branch` →  Este parámetro índica la rama destino.
 - `--token` → Este parámetro índica el token de github a usar.
 
 Ejemplo:
 
 ```bash
-  check-migration-addons --input-file=./test/test.xlsx --branch=17.0 --token=your_api_token
+  check-migration-addons --file=./test/test.xlsx --branch=17.0 --token=your_api_token
 ```
 ## Dependencias
 
