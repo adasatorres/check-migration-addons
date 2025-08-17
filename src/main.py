@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+import argparse
+import configparser
+import pandas as pd 
+import requests
+import re
+import os
+
 """
 This script verifies the existence of specific directories in GitHub repositories
 based on a list provided in an input Excel file. It utilizes the GitHub API to check
@@ -20,13 +27,7 @@ Dependencies:
     - openpyxl
 """
 
-import argparse
-import configparser
 import importlib.resources
-import pandas as pd 
-import requests
-import re
-import os
 config = configparser.ConfigParser()
 
 def init_config() -> None:
@@ -41,7 +42,7 @@ def init_config() -> None:
     """
     with importlib.resources.path('src', 'config.ini') as config_path:
         config.read(config_path)
-        print("Configuración cargada:", config.sections())
+        print("Configuration loaded:", config.sections())
         
 def get_arguments() -> dict:
     """
@@ -57,10 +58,10 @@ def get_arguments() -> dict:
             - 'branch': The name of the branch (str).
             - 'token': The personal access token for GitHub (str).
     """
-    parser = argparse.ArgumentParser(description="Verifica directorios en repositorios de GitHub desde un fichero y exporta resultados a Excel")
-    parser.add_argument("--file", help="Fichero de entrada con la lista de repositorios", required=True)
-    parser.add_argument("--branch", required=True, help="Nombre de la rama (por defecto la principal)")
-    parser.add_argument("--token", required=True, help="Token de acceso personal de GitHub")
+    parser = argparse.ArgumentParser(description="Verify directories in GitHub repositories from a file and export results to Excel")
+    parser.add_argument("--file", help="Input file with the list of repositories", required=True)
+    parser.add_argument("--branch", required=True, help="Branch name (default is main)")
+    parser.add_argument("--token", required=True, help="GitHub personal access token")
     return vars(parser.parse_args())
    
 
@@ -84,7 +85,7 @@ def read_file(file_path: str) -> pd.DataFrame:
         usecols=[col.strip() for col in config['options'].get('headers').split(",")], 
         engine="openpyxl"
     ).dropna()
-    print("Fichero leído correctamente:", file_path)
+    print("File read successfully:", file_path)
     return df
 
 def get_repo_name(url: str) -> str:
@@ -99,7 +100,7 @@ def get_repo_name(url: str) -> str:
              otherwise an empty string.
     """
     
-    print('Obteniendo nombre del repositorio de la URL:', url)
+    print('Getting repository name from the URL:', url)
     result =  re.search(r"github\.com/([^/]+)/([^/]+)", url)
     if result:
        return f"{result.group(1)}/{result.group(2)}"
@@ -125,15 +126,15 @@ def check_directory(repo: str, directory: str, branch: str, token: str) -> str:
         'Accept' : 'application/vnd.github.v3+json',
         'Authorization' : f'token {token}' if token else ''
     }
-    print('Comprobando addon:', directory, 'en repositorio:', repo, 'en rama:', branch)
+    print('Checking directory:', directory, 'in repository:', repo, 'on branch:', branch)
     url = f"https://api.github.com/repos/{repo}/contents/{directory}?ref={branch}"
     response = requests.get(url, headers=headers, stream=True)
     code = response.status_code
     response.close()
     if code == 200:
-        return f"Addon migrado en {branch}."
+        return f"Directory migrated in {branch}."
     elif code == 404:
-        print(f"Addon no encontrado en {branch}, comprobando si hay PR abierto...")
+        print(f"Directory not found in {branch}, checking if there is an open PR...")
         url_pull = f"https://api.github.com/repos/{repo}/pulls?state=open&per_page=20&page=1"
         while url_pull:
             response_pull = requests.get(url_pull, headers=headers, stream=True)
@@ -141,12 +142,11 @@ def check_directory(repo: str, directory: str, branch: str, token: str) -> str:
                 pulls = response_pull.json()
                 pattern = rf"\[{branch}\]\[(ADD|MIG)\]{directory}".lower()
 
-                #pr = list(filter(lambda pr: f"[{branch}][MIG]{directory}".lower() in pr["title"].lower().replace(" ", ""), pulls))
                 pr = list(filter(lambda pr: re.search(pattern, pr["title"].lower().replace(" ", "")), pulls))
                 if pr:
                     return f"PR: {pr[0]['html_url']}"
             url_pull = response_pull.links.get('next', {}).get('url', None)
-    return """Repositorio o addon no encontrado, revisar manualmente."""
+    return """Repository or directory not found, please check manually."""
     
 
 def current_path(path) -> str:
@@ -154,17 +154,17 @@ def current_path(path) -> str:
     Generate a new file path based on the provided path.
 
     This function takes a file path, extracts the file name and its extension,
-    and returns a new path with the same name but with '_estado' appended before
+    and returns a new path with the same name but with '_status' appended before
     the file extension. The new path is relative to the current directory.
 
     Args:
         path (str): The original file path.
 
     Returns:
-        str: The modified file path with '_estado' appended to the file name.
+        str: The modified file path with '_status' appended to the file name.
     """
     name, extension = os.path.splitext(os.path.basename(path))
-    return os.path.join('./', f"{name}_estado{extension}")
+    return os.path.join('./', f"{name}_status{extension}")
     
 
 def main() -> None:
@@ -198,12 +198,11 @@ def main() -> None:
             ),
         axis=1
     )
-    print("Resultados obtenidos:")
+    print("Results obtained:")
     print(df)
-    print("Guardando resultados en:", current_path(kwargs.get('file')))
+    print("Saving results to:", current_path(kwargs.get('file')))
     df.to_excel(current_path(kwargs.get('file')) , index=True)
-        
-        
     
-   
-    
+if __name__ == "__main__":
+    # If this script is run directly, execute the main function
+    main()
