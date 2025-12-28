@@ -19,7 +19,12 @@ The script performs the following key functions:
 5. Outputs the results to the console and saves them to a new Excel file.
 
 Usage:
-    python main.py --file <input_file_path> --branch <branch_name> --token <github_token>
+    python main.py 
+    --file <input_file_path> 
+    --branch <branch_name> 
+    --token <github_token> 
+    --column-url-github <column_name> 
+    --column-dir-name <column_name>
 
 Dependencies:
     - pandas
@@ -55,22 +60,27 @@ def get_arguments() -> dict:
     Returns:
         dict: A dictionary containing the parsed command-line arguments.
             - 'file': The input file with the list of repositories (str).
-            - 'branch': The name of the branch (str).
+            - 'branches': List of branch names separated by commas (str).
             - 'token': The personal access token for GitHub (str).
+            - 'column_url_github': The column name for GitHub URLs from config (str).
+            - 'column_dir_name': The column name for directory names from config (str).
     """
     parser = argparse.ArgumentParser(description="Verify directories in GitHub repositories from a file and export results to Excel")
     parser.add_argument("--file", help="Input file with the list of repositories", required=True)
-    parser.add_argument("--branch", required=True, help="Branch name (default is main)")
+    parser.add_argument("--branches", required=True, help="Branch name (default is main)")
     parser.add_argument("--token", required=True, help="GitHub personal access token")
+    parser.add_argument("--column-url-github", default=config['options'].get('column_url_github'), help="Column name for GitHub URLs")
+    parser.add_argument("--column-dir-name", default=config['options'].get('column_dir_name'), help="Column name for directory names")
     return vars(parser.parse_args())
    
 
-def read_file(file_path: str) -> pd.DataFrame:
+def read_file(file_path: str, headers : list ) -> pd.DataFrame:
     """
     Reads an Excel file and returns its content as a pandas DataFrame.
 
     Parameters:
     file_path (str): The path to the Excel file to be read.
+    headers (list): A list of column names to be used as headers in the DataFrame.
 
     Returns:
     pd.DataFrame: A DataFrame containing the data from the specified Excel file,
@@ -82,7 +92,7 @@ def read_file(file_path: str) -> pd.DataFrame:
     """
     df = pd.read_excel(
         file_path, 
-        usecols=[col.strip() for col in config['options'].get('headers').split(",")], 
+        usecols=headers, 
         engine="openpyxl"
     ).dropna()
     print("File read successfully:", file_path)
@@ -149,7 +159,7 @@ def check_directory(repo: str, directory: str, branch: str, token: str) -> str:
     return """Repository or directory not found, please check manually."""
     
 
-def current_path(path) -> str:
+def current_path(path, branch) -> str:
     """
     Generate a new file path based on the provided path.
 
@@ -164,7 +174,7 @@ def current_path(path) -> str:
         str: The modified file path with '_status' appended to the file name.
     """
     name, extension = os.path.splitext(os.path.basename(path))
-    return os.path.join('./', f"{name}_status{extension}")
+    return os.path.join('./', f"{name}_{branch}{extension}")
     
 
 def main() -> None:
@@ -188,20 +198,24 @@ def main() -> None:
     """
     init_config()
     kwargs = get_arguments()
-    df = read_file(kwargs.get('file'))
-    df['status'] = df.apply(
-        lambda row: check_directory(
-            get_repo_name(row[config['options'].get('column_url_github')]), 
-            row[config['options'].get('column_dir_name')],
-            kwargs['branch'],
-            kwargs['token']
-            ),
-        axis=1
-    )
-    print("Results obtained:")
-    print(df)
-    print("Saving results to:", current_path(kwargs.get('file')))
-    df.to_excel(current_path(kwargs.get('file')) , index=True)
+    branches = [branch.strip() for branch in kwargs['branches'].split(',')]
+    
+    for branch in branches:
+        print(f"Processing branch: {branch}")
+        df = read_file(kwargs.get('file'), [kwargs['column_url_github'], kwargs['column_dir_name']])
+        df['status'] = df.apply(
+            lambda row: check_directory(
+                get_repo_name(row[kwargs['column_url_github']]), 
+                row[kwargs['column_dir_name']],
+                branch,
+                kwargs['token']
+                ),
+            axis=1
+        )
+        print("Results obtained:")
+        print(df)
+        print("Saving results to:", current_path(kwargs.get('file'), branch))
+        df.to_excel(current_path(kwargs.get('file'), branch) , index=True)
     
 if __name__ == "__main__":
     # If this script is run directly, execute the main function

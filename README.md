@@ -35,13 +35,15 @@ Nota: Actualmente debes de utilizar este comando dentro de la ruta del proyecto 
 Para utilizar check-migration-addons necesitas 3 parametros obligatorios.
 
 - `--file` → Este parámetro índica la ruta absoluta o relativa de donde se encuentra el archivo excel a utilizar.
-- `--branch` →  Este parámetro índica la rama destino.
+- `--branches` →  Este parámetro índica las rama destino separadas por comas. Por ejemplo :  17.0,18.0
 - `--token` → Este parámetro índica el token de github a usar.
+- `--column-dir-name` → Este parametro indica la columna del nombre tecnico del addon o directorio a buscar en el repositorio.
+- `--column-url-github` → Este parametro indica la columna del con la url del repositorio a buscar.
 
 Ejemplo:
 
 ```bash
-  check-migration-addons --file=./test/test.xlsx --branch=17.0 --token=your_api_token
+  check-migration-addons --file=./test/test.xlsx --branches=17.0,18.0 --token=your_api_token  --column-dir-name="Nombre técnico" --column-url-github="Sitio web"
 ```
 ## Dependencias
 

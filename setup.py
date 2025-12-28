@@ -34,7 +34,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "check-migration-addons=src.main:main",  # mi_script.py con función main()
+            "check-migration-addons=src.main:main",
         ],
     },
     author="Adasat Torres de León",
