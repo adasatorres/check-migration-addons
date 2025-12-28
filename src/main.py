@@ -62,8 +62,8 @@ def get_arguments() -> dict:
             - 'file': The input file with the list of repositories (str).
             - 'branches': List of branch names separated by commas (str).
             - 'token': The personal access token for GitHub (str).
-            - 'column_url_github': The column name for GitHub URLs from config (str).
-            - 'column_dir_name': The column name for directory names from config (str).
+            - 'column-url-github': The column name for GitHub URLs from config (str).
+            - 'column-dir-name': The column name for directory names from config (str).
     """
     parser = argparse.ArgumentParser(description="Verify directories in GitHub repositories from a file and export results to Excel")
     parser.add_argument("--file", help="Input file with the list of repositories", required=True)
@@ -136,6 +136,8 @@ def check_directory(repo: str, directory: str, branch: str, token: str) -> str:
         'Accept' : 'application/vnd.github.v3+json',
         'Authorization' : f'token {token}' if token else ''
     }
+    if not repo:
+        return """Repository not found, please check manually."""
     print('Checking directory:', directory, 'in repository:', repo, 'on branch:', branch)
     url = f"https://api.github.com/repos/{repo}/contents/{directory}?ref={branch}"
     response = requests.get(url, headers=headers, stream=True)
@@ -151,7 +153,6 @@ def check_directory(repo: str, directory: str, branch: str, token: str) -> str:
             if response_pull.status_code == 200:
                 pulls = response_pull.json()
                 pattern = rf"\[{branch}\]\[(ADD|MIG)\]{directory}".lower()
-
                 pr = list(filter(lambda pr: re.search(pattern, pr["title"].lower().replace(" ", "")), pulls))
                 if pr:
                     return f"PR: {pr[0]['html_url']}"
@@ -159,7 +160,7 @@ def check_directory(repo: str, directory: str, branch: str, token: str) -> str:
     return """Repository or directory not found, please check manually."""
     
 
-def current_path(path, branch) -> str:
+def current_path(path) -> str:
     """
     Generate a new file path based on the provided path.
 
@@ -174,7 +175,7 @@ def current_path(path, branch) -> str:
         str: The modified file path with '_status' appended to the file name.
     """
     name, extension = os.path.splitext(os.path.basename(path))
-    return os.path.join('./', f"{name}_{branch}{extension}")
+    return os.path.join('./', f"{name}_result{extension}")
     
 
 def main() -> None:
@@ -199,11 +200,10 @@ def main() -> None:
     init_config()
     kwargs = get_arguments()
     branches = [branch.strip() for branch in kwargs['branches'].split(',')]
-    
+    df = read_file(kwargs.get('file'), [kwargs['column_url_github'], kwargs['column_dir_name']])
     for branch in branches:
         print(f"Processing branch: {branch}")
-        df = read_file(kwargs.get('file'), [kwargs['column_url_github'], kwargs['column_dir_name']])
-        df['status'] = df.apply(
+        df[f'result_{branch}'] = df.apply(
             lambda row: check_directory(
                 get_repo_name(row[kwargs['column_url_github']]), 
                 row[kwargs['column_dir_name']],
@@ -212,11 +212,10 @@ def main() -> None:
                 ),
             axis=1
         )
-        print("Results obtained:")
-        print(df)
-        print("Saving results to:", current_path(kwargs.get('file'), branch))
-        df.to_excel(current_path(kwargs.get('file'), branch) , index=True)
+    print("Results obtained:")
+    print(df)
+    print("Saving results to:", current_path(kwargs.get('file')))
+    df.to_excel(current_path(kwargs.get('file')) , index=True)
     
 if __name__ == "__main__":
-    # If this script is run directly, execute the main function
     main()
